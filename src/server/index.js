@@ -10,6 +10,7 @@ import webpackConfig from '../../webpack.config';
 
 import { RouterContext, match } from 'react-router';
 import { Provider } from 'react-redux';
+import fetchNeeds from '../common/utils/fetch-needs';
 
 import configureStore from '../common/configure-store';
 import routes from '../common/routes';
@@ -27,7 +28,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 
-const renderFullPage = (html, initialState) => {
+const renderHTML = (html, initialState) => {
   const assetsManifest
     = process.env.webpackAssets && JSON.parse(process.env.webpackAssets)
 
@@ -51,48 +52,40 @@ const renderFullPage = (html, initialState) => {
   `;
 }
 
-app.use((req, res, next) => {
+app.use((req, reponse, next) => {
   match({ routes, location: req.url }, (err, redirectLocation, renderProps) => {
     if (err) {
-      return res.status(500).end(renderError(err));
+      return reponse.status(500).end(renderError(err));
     }
 
     if (redirectLocation) {
-      return res.redirect(302, redirectLocation.pathname + redirectLocation.search);
+      return reponse.redirect(302, redirectLocation.pathname + redirectLocation.search);
     }
 
     if (!renderProps) {
       return next();
     }
 
-    const initialView = renderToString(
-      <RouterContext {...renderProps} />
+
+    const store = configureStore();
+
+    const view = renderToString(
+      <Provider store={ store }>
+        <RouterContext {...renderProps} />
+      </Provider>
     );
 
-    res
-      .set('Content-Type', 'text/html')
-      .status(200)
-      .end(renderFullPage(initialView, {}));
 
-  //   const store = configureStore();
+    return fetchNeeds(store, renderProps.components, renderProps.params)
+      .then(() => {
+        const newState = store.getState();
 
-  //   return fetchComponentData(store, renderProps.components, renderProps.params)
-  //     .then(() => {
-  //       const initialView = renderToString(
-  //         <Provider store={store}>
-  //           <IntlWrapper>
-  //             <RouterContext {...renderProps} />
-  //           </IntlWrapper>
-  //         </Provider>
-  //       );
-  //       const finalState = store.getState();
-
-  //       res
-  //         .set('Content-Type', 'text/html')
-  //         .status(200)
-  //         .end(renderFullPage(initialView, finalState));
-  //     })
-  //     .catch((error) => next(error));
+        reponse
+          .set('Content-Type', 'text/html')
+          .status(200)
+          .end(renderHTML(view, newState));
+      })
+      .catch(error => next(error))
   });
 });
 

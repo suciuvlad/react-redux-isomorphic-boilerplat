@@ -12,4 +12,8 @@ class Welcome extends Component {
   }
 }
 
+
+Welcome.need = [
+];
+
 module.exports = Welcome;

@@ -6,7 +6,7 @@ if (typeof require.ensure !== 'function') {
 }
 
 module.exports = {
-  path: 'welcome',
+  path: '/welcome',
   getComponent(nextState, cb) {
     require.ensure([], (require) => {
       cb(null, require('../pages/welcome'))
